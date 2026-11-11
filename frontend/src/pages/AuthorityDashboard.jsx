@@ -35,7 +35,9 @@ import {
   fetchAuthorityActions, 
   saveAuthorityAction,
   fetchAlerts,
-  fetchExplanations 
+  fetchExplanations,
+  subscribeToTelemetry,
+  toggleTelemetryStream
 } from '../services/api';
 
 export default function AuthorityDashboard() {
@@ -52,6 +54,28 @@ export default function AuthorityDashboard() {
   const [modalAction, setModalAction] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [streamPacket, setStreamPacket] = useState({ packet_id: 1, timestamp: new Date().toISOString() });
+  const [isStreaming, setIsStreaming] = useState(true);
+
+  // Subscribe to dynamic interval telemetry stream
+  useEffect(() => {
+    const unsubscribe = subscribeToTelemetry((update) => {
+      setStreamPacket({
+        packet_id: update.packet_id,
+        timestamp: update.timestamp,
+        interval_seconds: update.interval_seconds
+      });
+      setStations(update.stations);
+
+      // Dynamically update the selected station observation
+      const curr = update.stations.find(s => s.station_id === selectedStationId) || update.stations[0];
+      if (curr) {
+        setCurrentAirQuality(curr);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedStationId]);
 
   // Load initial station data
   useEffect(() => {
@@ -155,6 +179,57 @@ export default function AuthorityDashboard() {
                   ))}
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* Dynamic Interval Telemetry Status Banner */}
+          <div className="mt-4 p-3 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/80 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </span>
+              <span className="font-bold text-emerald-900 flex items-center gap-1.5">
+                <span>Dynamic Telemetry Stream Active</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-emerald-200/70 text-emerald-800 text-[10px] font-mono">
+                  Interval: 5s
+                </span>
+              </span>
+              <span className="text-emerald-700 hidden sm:inline">•</span>
+              <span className="text-emerald-800 font-mono text-[11px] hidden sm:inline">
+                Packet #{streamPacket.packet_id} delivered at {new Date(streamPacket.timestamp).toLocaleTimeString()}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const active = toggleTelemetryStream();
+                  setIsStreaming(active);
+                }}
+                className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-colors ${
+                  isStreaming
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    : 'bg-amber-600 text-white hover:bg-amber-700'
+                }`}
+              >
+                {isStreaming ? 'Stream Running' : 'Stream Paused'}
+              </button>
+              <button
+                onClick={async () => {
+                  const [preds, recs] = await Promise.all([
+                    fetchAqiPredictions(selectedStationId),
+                    fetchAuthorityRecommendations(selectedStationId)
+                  ]);
+                  setPredictions(preds);
+                  setRecommendations(recs.recommendations || []);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-white border border-base-200 text-base-700 hover:bg-base-100 text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                title="Force manual refresh"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Sync</span>
+              </button>
             </div>
           </div>
 

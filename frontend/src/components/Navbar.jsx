@@ -33,9 +33,11 @@ export default function Navbar() {
                   AirGuard<span className="text-blue-600 font-extrabold">AI</span>
                 </span>
                 {healthInfo.is_live === true ? (
-                  <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1" title={healthInfo.live_type === 'direct' ? 'Live Direct CAAQMS Open-Meteo Ingestion' : 'Connected to Live Python ML Backend'}>
+                  <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5 shadow-xs" title="Live Telemetry Stream delivering CPCB CAAQMS sensor observations in dynamic intervals">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    {healthInfo.live_type === 'direct' ? 'LIVE CAAQMS (DIRECT)' : 'LIVE CAAQMS (BACKEND)'}
+                    {healthInfo.live_type === 'stream' 
+                      ? 'LIVE STREAM (5s INTERVAL)' 
+                      : (healthInfo.live_type === 'direct' ? 'LIVE CAAQMS (DIRECT)' : 'LIVE CAAQMS (BACKEND)')}
                   </span>
                 ) : (
                   <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1" title="Offline Demo Simulation. Run python start_server.py for live ML backend.">

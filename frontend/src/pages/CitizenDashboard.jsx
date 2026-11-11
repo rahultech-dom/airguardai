@@ -26,7 +26,8 @@ import {
   fetchCurrentAirQuality, 
   fetchAqiPredictions, 
   fetchCitizenAdvisory,
-  fetchAirQualityHistory 
+  fetchAirQualityHistory,
+  subscribeToTelemetry 
 } from '../services/api';
 
 export default function CitizenDashboard() {
@@ -39,6 +40,26 @@ export default function CitizenDashboard() {
   const [historyData, setHistoryData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [streamPacket, setStreamPacket] = useState({ packet_id: 1, timestamp: new Date().toISOString() });
+
+  // Subscribe to dynamic interval telemetry stream
+  useEffect(() => {
+    const unsubscribe = subscribeToTelemetry((update) => {
+      setStreamPacket({
+        packet_id: update.packet_id,
+        timestamp: update.timestamp,
+        interval_seconds: update.interval_seconds
+      });
+      setLocations(update.stations);
+
+      const current = update.stations.find(s => s.station_id === selectedStationId) || update.stations[0];
+      if (current) {
+        setCurrentAirQuality(current);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedStationId]);
 
   // Load locations
   useEffect(() => {
@@ -140,6 +161,12 @@ export default function CitizenDashboard() {
               <p className="text-xs sm:text-sm text-base-600 mt-1 max-w-2xl leading-relaxed">
                 Understand what is in your air, why pollution levels change, and what actionable precautions you should take right now.
               </p>
+              <div className="flex items-center gap-2 mt-3">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  <span>Dynamic Telemetry Stream • Delivering packets every 5s • Packet #{streamPacket.packet_id}</span>
+                </span>
+              </div>
             </div>
 
             {/* Location Search & Selection Box */}
